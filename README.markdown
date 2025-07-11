@@ -76,10 +76,6 @@ Contributions are welcome! To contribute:
 
 Please ensure your code follows the project's style and includes updates to this README if necessary.
 
-## License
-
-This project is open-source and available under the [MIT License](LICENSE). Feel free to use, modify, and distribute it as per the license terms.
-
 ## Acknowledgments
 
 - [Vue.js](https://vuejs.org/) for the reactive framework.
