@@ -1,0 +1,299 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Profile</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+  <div id="app">
+    <div class="bg-gray-200 py-8">
+      <div class="max-w-5xl mx-auto px-4">
+        <div class="mb-4">
+          <nav class="bg-white rounded-lg p-3 shadow">
+            <ol class="flex space-x-2 text-sm text-gray-600">
+              <li><a href="#" @click.prevent class="hover:text-blue-600">Home</a></li>
+              <li class="text-gray-400">/</li>
+              <li><a href="#" @click.prevent class="hover:text-blue-600">User</a></li>
+              <li class="text-gray-400">/</li>
+              <li class="font-semibold">User Profile</li>
+            </ol>
+          </nav>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+          <div class="w-full lg:w-1/3">
+            <div class="bg-white rounded-lg shadow mb-4">
+              <div class="p-6 text-center relative">
+                <img
+                  :src="portfolio.image || 'https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava3.webp'"
+                  alt="Profile Picture"
+                  class="rounded-full w-36 h-36 object-cover mx-auto"
+                />
+                <div v-if="isEditing" class="mt-4">
+                  <label class="block text-gray-700 mb-2">Upload Profile Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="handleImageUpload"
+                    class="w-full p-2 border rounded"
+                  />
+                </div>
+                <div v-if="isEditing" class="mt-4">
+                  <label class="block text-gray-700 mb-2">Upload Resume (PDF)</label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    @change="handleResumeUpload"
+                    class="w-full p-2 border rounded"
+                  />
+                  <p v-if="portfolio.resume" class="mt-2 text-blue-600">Resume: {{ portfolio.resume.name }}</p>
+                </div>
+                <div class="mt-4 text-center">
+                  <h5 class="text-xl font-semibold inline-block">{{ portfolio.name || 'Your Name' }}</h5>
+                  <span v-if="isEditing" class="text-blue-600 cursor-pointer ml-2" @click="saveEdit('name')">✔</span>
+                </div>
+                <p class="text-gray-600">{{ portfolio.title || 'Your Position' }}</p>
+                <span v-if="isEditing" class="text-blue-600 cursor-pointer block mt-1" @click="saveEdit('title')">✔</span>
+                <p class="text-gray-600 mb-4">{{ portfolio.location || 'Your Location' }}</p>
+                <span v-if="isEditing" class="text-blue-600 cursor-pointer block mt-1" @click="saveEdit('location')">✔</span>
+                <div class="flex justify-center gap-2">
+                  <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Follow</button>
+                  <button class="border border-blue-600 text-blue-600 px-4 py-2 rounded hover:bg-blue-50">Message</button>
+                </div>
+                <div v-if="isEditing" class="mt-4 text-center">
+                  <label class="block text-gray-700 mb-2">Skills</label>
+                  <input
+                    v-model="portfolio.skills"
+                    type="text"
+                    class="w-full p-2 border rounded"
+                    placeholder="e.g., Python, JavaScript, SQL"
+                  />
+                  <span class="text-blue-600 cursor-pointer block mt-1" @click="saveEdit('skills')">✔</span>
+                </div>
+                <div v-else-if="portfolio.skills" class="mt-4 text-center">
+                  <p class="text-gray-700">Skills: {{ portfolio.skills }}</p>
+                </div>
+              </div>
+            </div>
+            <div v-if="portfolio.projects.length" class="bg-white rounded-lg shadow">
+              <div class="p-6">
+                <h4 class="text-lg font-semibold mb-2">Main Projects</h4>
+                <ul class="space-y-2">
+                  <li v-for="(project, index) in portfolio.projects" :key="index" class="text-blue-600">
+                    <a :href="project.link || '#'" target="_blank">{{ project.name }}</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="w-full lg:w-2/3">
+            <div class="bg-white rounded-lg shadow mb-4">
+              <div class="p-6">
+                <div class="flex items-center mb-3">
+                  <p class="w-1/4 font-semibold">Phone</p>
+                  <p v-if="!isEditing" class="w-3/4 text-gray-600">{{ portfolio.phone || '(097) 234-5678' }}</p>
+                  <input v-else v-model="portfolio.phone" type="text" class="w-3/4 p-2 border rounded" placeholder="(097) 234-5678" />
+                  <span v-if="isEditing" class="text-blue-600 cursor-pointer ml-2" @click="saveEdit('phone')">✔</span>
+                </div>
+                <hr class="my-2">
+                <div class="flex items-center mb-3">
+                  <p class="w-1/4 font-semibold">Mobile</p>
+                  <p v-if="!isEditing" class="w-3/4 text-gray-600">{{ portfolio.mobile || '(098) 765-4321' }}</p>
+                  <input v-else v-model="portfolio.mobile" type="text" class="w-3/4 p-2 border rounded" placeholder="(098) 765-4321" />
+                  <span v-if="isEditing" class="text-blue-600 cursor-pointer ml-2" @click="saveEdit('mobile')">✔</span>
+                </div>
+                <hr class="my-2">
+                <div class="flex items-center">
+                  <p class="w-1/4 font-semibold">Address</p>
+                  <p v-if="!isEditing" class="w-3/4 text-gray-600">{{ portfolio.location || 'Your Location' }}</p>
+                  <input v-else v-model="portfolio.location" type="text" class="w-3/4 p-2 border rounded" placeholder="Your Location" />
+                  <span v-if="isEditing" class="text-blue-600 cursor-pointer ml-2" @click="saveEdit('location')">✔</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white rounded-lg shadow">
+                <div class="p-6">
+                  <p class="mb-4 text-blue-600 font-italic">Skills</p>
+                  <p class="text-sm mb-1">Skills</p>
+                  <div class="w-full bg-gray-200 rounded h-1.5">
+                    <div class="bg-blue-600 h-1.5 rounded" :style="{ width: portfolio.skills ? '80%' : '0%' }"></div>
+                  </div>
+                  <p class="mt-4 text-sm mb-1">Projects</p>
+                  <div class="w-full bg-gray-200 rounded h-1.5">
+                    <div class="bg-blue-600 h-1.5 rounded" :style="{ width: portfolio.projectsDescription ? '72%' : '0%' }"></div>
+                  </div>
+                  <p class="mt-4 text-sm mb-1">Repositories</p>
+                  <div class="w-full bg-gray-200 rounded h-1.5">
+                    <div class="bg-blue-600 h-1.5 rounded" :style="{ width: portfolio.projects.length ? '89%' : '0%' }"></div>
+                  </div>
+                  <p class="mt-4 text-sm mb-1">Experience</p>
+                  <div class="w-full bg-gray-200 rounded h-1.5">
+                    <div class="bg-blue-600 h-1.5 rounded" :style="{ width: portfolio.experience ? '55%' : '0%' }"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white rounded-lg shadow">
+                <div class="p-6">
+                  <p class="mb-4 text-blue-600 font-italic">Project Details</p>
+                  <p class="text-sm mb-1">Project Description</p>
+                  <p v-if="!isEditing" class="text-gray-700 mb-4">{{ portfolio.projectsDescription || 'No project description added yet' }}</p>
+                  <textarea v-else v-model="portfolio.projectsDescription" class="w-full p-2 border rounded mb-2" rows="3" placeholder="Describe your key projects"></textarea>
+                  <span v-if="isEditing" class="text-blue-600 cursor-pointer block mt-1" @click="saveEdit('projectsDescription')">✔</span>
+                  <p v-if="portfolio.projects.length && !isEditing" class="text-sm mb-1">Repositories</p>
+                  <div v-if="isEditing" class="mb-4">
+                    <label class="block text-gray-700 mb-2">Add Project</label>
+                    <input v-model="newProject.name" type="text" class="w-full p-2 border rounded mb-2" placeholder="Project Name" />
+                    <input v-model="newProject.link" type="text" class="w-full p-2 border rounded mb-2" placeholder="Project Link" />
+                    <button @click="addProject" class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Add</button>
+                  </div>
+                  <div v-for="(project, index) in portfolio.projects" :key="index" class="mt-2">
+                    <p v-if="!isEditing"><strong>Name:</strong> {{ project.name }}</p>
+                    <input v-else v-model="project.name" type="text" class="w-full p-2 border rounded mb-1" placeholder="Project Name" />
+                    <p v-if="!isEditing"><strong>Link:</strong> <a :href="project.link || '#'" target="_blank">{{ project.link || 'No link' }}</a></p>
+                    <input v-else v-model="project.link" type="text" class="w-full p-2 border rounded mb-1" placeholder="Project Link" />
+                    <span v-if="isEditing" class="text-blue-600 cursor-pointer ml-2" @click="saveEdit('projects', index)">✔</span>
+                  </div>
+                  <p class="mt-4 text-sm mb-1">Experience</p>
+                  <p v-if="!isEditing" class="text-gray-700">{{ portfolio.experience || 'No experience added yet' }}</p>
+                  <textarea v-else v-model="portfolio.experience" class="w-full p-2 border rounded mb-2" rows="3" placeholder="Detail your work experience"></textarea>
+                  <span v-if="isEditing" class="text-blue-600 cursor-pointer block mt-1" @click="saveEdit('experience')">✔</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="shareLink" class="mt-4">
+              <h3 class="text-lg font-semibold">Your Portfolio Link</h3>
+              <p class="text-blue-600">{{ shareLink }}</p>
+            </div>
+            <button
+              @click="toggleEdit"
+              class="mt-4 bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+            >
+              {{ isEditing ? 'Save' : 'Edit Profile' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          isEditing: false,
+          user: {
+            email: 'example@example.com',
+          },
+          portfolio: {
+            image: '',
+            name: 'John Smith',
+            title: 'Full Stack Developer',
+            location: 'Bay Area, San Francisco, CA',
+            phone: '(097) 234-5678',
+            mobile: '(098) 765-4321',
+            skills: 'Python, JavaScript, SQL',
+            projectsDescription: 'Developed a web application for task management.',
+            projects: [
+              { name: 'Task Manager', link: 'https://example.com/taskmanager' },
+            ],
+            experience: '5 years as a Full Stack Developer at Tech Corp.',
+            resume: null,
+          },
+          newProject: { name: '', link: '' },
+          shareLink: 'https://itportfoliohub.com/portfolio/johnsmith',
+        };
+      },
+      methods: {
+        toggleEdit() {
+          if (this.isEditing) {
+            // Save logic can be added here for backend integration
+            this.isEditing = false;
+          } else {
+            this.isEditing = true;
+          }
+        },
+        handleImageUpload(event) {
+          const file = event.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.portfolio.image = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        },
+        handleResumeUpload(event) {
+          const file = event.target.files[0];
+          if (file && file.type === 'application/pdf') {
+            this.portfolio.resume = file;
+          } else {
+            alert('Please upload a PDF file.');
+          }
+        },
+        addProject() {
+          if (this.newProject.name && this.newProject.link) {
+            this.portfolio.projects.push({ ...this.newProject });
+            this.newProject = { name: '', link: '' };
+          } else {
+            alert('Please provide project name and link.');
+          }
+        },
+        saveEdit(field, index = null) {
+          // Placeholder for backend save logic
+          if (index !== null) {
+            // Handle project-specific edits
+            this.portfolio.projects[index] = { ...this.portfolio.projects[index] };
+          }
+          // Additional save logic can be added here
+        },
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>
