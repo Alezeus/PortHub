@@ -1,0 +1,537 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Portfolio Hub</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+  <div id="app">
+    <header class="bg-blue-900 text-white py-6">
+      <div class="container mx-auto px-4 flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold">IT Portfolio Hub</h1>
+          <p class="mt-2">Showcase your skills and share with employers</p>
+        </div>
+        <nav>
+          <ul class="flex space-x-6">
+            <li><a href="#" @click.prevent="currentTab = 'home'" :class="{ 'font-bold border-b-2 border-white': currentTab === 'home' }" class="hover:text-gray-300">Home</a></li>
+            <li><a href="#" @click.prevent="currentTab = 'employers'" :class="{ 'font-bold border-b-2 border-white': currentTab === 'employers' }" class="hover:text-gray-300">Employers</a></li>
+            <li><a href="#" @click.prevent="currentTab = 'contact'" :class="{ 'font-bold border-b-2 border-white': currentTab === 'contact' }" class="hover:text-gray-300">Contact</a></li>
+            <li><a href="#" @click.prevent="currentTab = 'about'" :class="{ 'font-bold border-b-2 border-white': currentTab === 'about' }" class="hover:text-gray-300">About</a></li>
+            <li v-if="!user"><a href="#" @click.prevent="currentTab = 'signin'" :class="{ 'font-bold border-b-2 border-white': currentTab === 'signin' }" class="hover:text-gray-300">Sign In</a></li>
+            <li v-if="user"><a href="#" @click.prevent="currentTab = 'createPortfolio'" class="hover:text-gray-300">Edit Portfolio</a></li>
+            <li v-if="user"><a href="#" @click.prevent="handleLogout" class="hover:text-gray-300">Logout</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+      <div v-if="currentTab === 'home'" class="text-center">
+        <h2 class="text-3xl font-semibold mb-4">Welcome to IT Portfolio Hub</h2>
+        <p class="text-lg mb-6">Build and share your professional portfolio with ease. Connect with top employers in the IT industry.</p>
+        <button v-if="!user" @click="currentTab = 'signin'" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700">Get Started</button>
+
+        <!-- Roles Options Section -->
+        <div class="mt-8">
+          <h3 class="text-xl font-semibold mb-2">Select Your Role</h3>
+          <select v-model="selectedRole" class="w-full max-w-xs p-2 border rounded" @change="updateRole">
+            <option value="" disabled>Select a role</option>
+            <option value="Developer">Developer</option>
+            <option value="Designer">Designer</option>
+            <option value="Data Analyst">Data Analyst</option>
+            <option value="DevOps Engineer">DevOps Engineer</option>
+            <option value="Project Manager">Project Manager</option>
+          </select>
+          <p v-if="selectedRole" class="mt-2 text-gray-700">Selected Role: {{ selectedRole }}</p>
+        </div>
+      </div>
+
+      <div v-if="currentTab === 'employers'" class="text-center">
+        <h2 class="text-3xl font-semibold mb-4">For Employers</h2>
+        <p class="text-lg mb-6">Discover top IT talent with detailed portfolios showcasing skills, projects, and experience.</p>
+        <button v-if="!user" @click="currentTab = 'signin'" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700">Find Talent</button>
+      </div>
+
+      <div v-if="currentTab === 'contact'" class="max-w-md mx-auto">
+        <h2 class="text-3xl font-semibold mb-4">Contact Us</h2>
+        <p class="text-lg mb-6">Have questions? Reach out to our team!</p>
+        <p>Email: <a href="mailto:support@itportfoliohub.com" class="text-blue-600">support@itportfoliohub.com</a></p>
+        <p>Phone: +1 (555) 123-4567</p>
+      </div>
+
+      <div v-if="currentTab === 'about'" class="text-center">
+        <h2 class="text-3xl font-semibold mb-4">About IT Portfolio Hub</h2>
+        <p class="text-lg mb-6">We empower IT professionals to showcase their expertise through customizable portfolios, connecting job-seekers with employers globally.</p>
+      </div>
+
+      <div v-if="currentTab === 'signin'" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold mb-4">{{ isSignUp ? 'Create Account' : 'Sign In' }}</h2>
+        <div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Email</label>
+            <input
+              v-model="loginForm.email"
+              type="email"
+              class="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Password</label>
+            <input
+              v-model="loginForm.password"
+              type="password"
+              class="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div v-if="isSignUp" class="mb-4">
+            <label class="block text-gray-700">Confirm Password</label>
+            <input
+              v-model="loginForm.confirmPassword"
+              type="password"
+              class="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <button
+            @click="isSignUp ? handleSignUp : handleLogin"
+            class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          >
+            {{ isSignUp ? 'Create Account' : 'Sign In' }}
+          </button>
+          <p class="mt-4 text-center">
+            <a href="#" @click.prevent="isSignUp = !isSignUp" class="text-blue-600">
+              {{ isSignUp ? 'Already have an account? Sign In' : 'Need an account? Create one' }}
+            </a>
+          </p>
+        </div>
+      </div>
+
+      <div v-if="currentTab === 'createPortfolio' && user" class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold mb-4">Create Your Portfolio</h2>
+        <div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Profile Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              @change="handleImageUpload"
+              class="w-full p-2 border rounded"
+            />
+            <img
+              v-if="portfolio.image"
+              :src="portfolio.image"
+              alt="Profile Preview"
+              class="mt-2 w-32 h-32 object-cover rounded-full"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Full Name</label>
+            <input
+              v-model="portfolio.name"
+              type="text"
+              class="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Professional Title</label>
+            <input
+              v-model="portfolio.title"
+              type="text"
+              class="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Location</label>
+            <input
+              v-model="portfolio.location"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., Bay Area, San Francisco, CA"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Website</label>
+            <input
+              v-model="portfolio.website"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., https://example.com"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">GitHub Username</label>
+            <input
+              v-model="portfolio.github"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., username"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Twitter Handle</label>
+            <input
+              v-model="portfolio.twitter"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., @username"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Instagram Username</label>
+            <input
+              v-model="portfolio.instagram"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., username"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Facebook Username</label>
+            <input
+              v-model="portfolio.facebook"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., username"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Phone</label>
+            <input
+              v-model="portfolio.phone"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., (097) 234-5678"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Mobile</label>
+            <input
+              v-model="portfolio.mobile"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., (098) 765-4321"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Skills (comma-separated)</label>
+            <input
+              v-model="portfolio.skills"
+              type="text"
+              class="w-full p-2 border rounded"
+              placeholder="e.g., Python, Data Analysis, SQL"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Projects</label>
+            <textarea
+              v-model="portfolio.projectsDescription"
+              class="w-full p-2 border rounded"
+              rows="4"
+              placeholder="Describe your key projects"
+            ></textarea>
+          </div>
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold mb-2">Add Project Repository</h3>
+            <div class="mb-2">
+              <label class="block text-gray-700">Project Name</label>
+              <input
+                v-model="newProject.name"
+                type="text"
+                class="w-full p-2 border rounded"
+                placeholder="e.g., Data Analysis App"
+              />
+            </div>
+            <div class="mb-2">
+              <label class="block text-gray-700">Project Description</label>
+              <textarea
+                v-model="newProject.description"
+                class="w-full p-2 border rounded"
+                rows="3"
+                placeholder="Briefly describe this project"
+              ></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="block text-gray-700">Upload Project Files</label>
+              <input
+                type="file"
+                multiple
+                @change="handleProjectFilesUpload"
+                class="w-full p-2 border rounded"
+              />
+            </div>
+            <button
+              @click="addProject"
+              class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+            >
+              Add Project
+            </button>
+            <div v-if="portfolio.projects.length" class="mt-4">
+              <h4 class="text-md font-semibold">Added Projects</h4>
+              <div v-for="(project, index) in portfolio.projects" :key="index" class="mt-2 p-4 border rounded">
+                <p><strong>Name:</strong> {{ project.name }}</p>
+                <p><strong>Description:</strong> {{ project.description }}</p>
+                <p><strong>Files:</strong> {{ project.files.map(f => f.name).join(', ') }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Experience</label>
+            <textarea
+              v-model="portfolio.experience"
+              class="w-full p-2 border rounded"
+              rows="4"
+              placeholder="Detail your work experience"
+            ></textarea>
+          </div>
+          <button
+            @click="handlePortfolioSubmit"
+            class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          >
+            Save Portfolio
+          </button>
+          <button
+            @click="currentTab = 'home'"
+            class="w-full mt-2 bg-gray-600 text-white p-2 rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-blue-900 text-white py-4">
+      <div class="container mx-auto px-4 text-center">
+        <p>© 2025 IT Portfolio Hub. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          currentTab: 'home',
+          user: null,
+          isSignUp: false,
+          loginForm: {
+            email: '',
+            password: '',
+            confirmPassword: '',
+          },
+          portfolio: {
+            image: '',
+            name: '',
+            title: '',
+            location: '',
+            website: '',
+            github: '',
+            twitter: '',
+            instagram: '',
+            facebook: '',
+            phone: '',
+            mobile: '',
+            skills: '',
+            projectsDescription: '',
+            projects: [],
+            experience: '',
+          },
+          newProject: {
+            name: '',
+            description: '',
+            files: [],
+          },
+          shareLink: '',
+          selectedRole: '', // New data property for role selection
+        };
+      },
+      methods: {
+        handleLogin() {
+          // Placeholder: Backend API call for authentication
+          if (this.loginForm.email && this.loginForm.password) {
+            this.user = { email: this.loginForm.email };
+            this.currentTab = 'createPortfolio'; // Direct to create portfolio after sign-in
+            this.loginForm.email = '';
+            this.loginForm.password = '';
+          } else {
+            alert('Please fill in all fields');
+          }
+        },
+        handleSignUp() {
+          // Placeholder: Backend API call for account creation
+          if (this.loginForm.email && this.loginForm.password && this.loginForm.confirmPassword) {
+            if (this.loginForm.password === this.loginForm.confirmPassword) {
+              this.user = { email: this.loginForm.email };
+              this.currentTab = 'createPortfolio'; // Direct to create portfolio after sign-up
+              this.loginForm.email = '';
+              this.loginForm.password = '';
+              this.loginForm.confirmPassword = '';
+              this.isSignUp = false;
+            } else {
+              alert('Passwords do not match');
+            }
+          } else {
+            alert('Please fill in all fields');
+          }
+        },
+        handleLogout() {
+          this.user = null;
+          this.currentTab = 'home';
+          this.portfolio = {
+            image: '',
+            name: '',
+            title: '',
+            location: '',
+            website: '',
+            github: '',
+            twitter: '',
+            instagram: '',
+            facebook: '',
+            phone: '',
+            mobile: '',
+            skills: '',
+            projectsDescription: '',
+            projects: [],
+            experience: '',
+          };
+          this.shareLink = '';
+          this.selectedRole = '';
+        },
+        handleImageUpload(event) {
+          const file = event.target.files[0];
+          if (file) {
+            // Placeholder: Backend API call to upload image
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.portfolio.image = e.target.result; // Store base64 image for preview
+            };
+            reader.readAsDataURL(file);
+          }
+        },
+        handleProjectFilesUpload(event) {
+          const files = Array.from(event.target.files);
+          // Placeholder: Backend API call to upload project files
+          this.newProject.files = files.map(file => ({
+            name: file.name,
+            url: URL.createObjectURL(file) // Temporary URL for client-side preview
+          }));
+        },
+        addProject() {
+          if (this.newProject.name && this.newProject.description) {
+            this.portfolio.projects.push({ ...this.newProject });
+            this.newProject = { name: '', description: '', files: [] };
+          } else {
+            alert('Please provide project name and description');
+          }
+        },
+        handlePortfolioSubmit() {
+          // Placeholder: Backend API call to save portfolio, including image and projects
+          if (this.portfolio.name && this.portfolio.title) {
+            const link = `https://itportfoliohub.com/portfolio/${this.user.email.split('@')[0]}`;
+            this.shareLink = link;
+            alert('Portfolio saved! Share this link: ' + link);
+            this.currentTab = 'home'; // Return to home after saving
+          } else {
+            alert('Please fill in required fields');
+          }
+        },
+        updateRole() {
+          // Placeholder: Backend API call to update user role
+          if (this.selectedRole) {
+            console.log('Role updated to:', this.selectedRole);
+            // Additional logic can be added here
+          }
+        },
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>
